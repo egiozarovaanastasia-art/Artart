@@ -233,17 +233,37 @@ bgUpload.addEventListener('change', function(e) {
   }
 });
 
-// --- ЗАГРУЗКА ДАННЫХ ---
+// --- ЗАГРУЗКА ДАННЫХ (С ЗАЩИТОЙ ОТ ОШИБОК) ---
 async function loadData() {
+  const container = document.getElementById('wallpapers-grid');
+  container.innerHTML = "<p style='text-align:center; grid-column: 1/-1;'>Загрузка...</p>";
+
   try {
     const response = await fetch(CSV_URL);
     const csvText = await response.text();
+    
+    // Проверка, не вернул ли Google страницу входа вместо CSV
+    if (csvText.includes("<!DOCTYPE html>") || csvText.includes("<html")) {
+      container.innerHTML = "<p style='color:red; text-align:center; grid-column: 1/-1;'>Ошибка: Google не отдаёт данные. Скорее всего, в настройках доступа всё ещё стоит 'Ограниченный доступ'.</p>";
+      return;
+    }
+
     const rows = parseCSV(csvText);
     
+    if (rows.length < 2) {
+       container.innerHTML = "<p style='color:red; text-align:center; grid-column: 1/-1;'>Ошибка: В таблице нет данных или неверные заголовки.</p>";
+       return;
+    }
+
     const headers = rows[0].map(h => h.trim().toLowerCase());
     const idxTitle = headers.indexOf('название');
     const idxCat = headers.indexOf('категория');
     const idxPhoto = headers.indexOf('фото');
+
+    if (idxTitle === -1 || idxPhoto === -1) {
+       container.innerHTML = "<p style='color:red; text-align:center; grid-column: 1/-1;'>Ошибка: В таблице нет столбцов 'Название' или 'Фото'. Проверьте первую строку.</p>";
+       return;
+    }
 
     allWallpapers = rows.slice(1)
       .filter(row => row[idxTitle] && row[idxPhoto])
@@ -256,7 +276,7 @@ async function loadData() {
     initCategories();
     renderWallpapers();
   } catch (error) {
-    document.getElementById('wallpapers-grid').innerHTML = "<p>Ошибка загрузки данных. Проверьте доступ к таблице.</p>";
+    container.innerHTML = "<p style='color:red; text-align:center; grid-column: 1/-1;'>Ошибка сети. Не удалось подключиться к таблице.</p>";
   }
 }
 
