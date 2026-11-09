@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubbles | Обои</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap');
+
+  :root {
+    --bg-color: #f0f4f8;
+    --accent: #6b8cff;
+    --text-main: #2d3748;
+    --text-light: #718096;
+    --bubble-bg: rgba(255, 255, 255, 0.85);
+    --bubble-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    --border-radius: 30px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body { 
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main); 
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* --- ФОН ПОЛЬЗОВАТЕЛЯ (РАЗМЫТЫЙ) --- */
+  #user-bg {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-size: cover; background-position: center;
+    filter: blur(15px) brightness(1.1);
+    z-index: -1; opacity: 0; transition: opacity 0.5s ease;
+  }
+  #user-bg.active { opacity: 1; }
+
+  /* --- ШАПКА --- */
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px; position: sticky; top: 0; z-index: 10;
+    background: rgba(240, 244, 248, 0.8); backdrop-filter: blur(15px);
+  }
+  .logo { font-size: 24px; font-weight: 900; color: var(--accent); letter-spacing: -1px; }
+  .header-btns { display: flex; gap: 10px; }
+  
+  .icon-btn {
+    background: var(--bubble-bg); border: none; color: var(--text-main);
+    width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+    font-size: 20px; display: flex; justify-content: center; align-items: center;
+    box-shadow: var(--bubble-shadow); transition: transform 0.2s;
+  }
+  .icon-btn:hover { transform: scale(1.05); }
+
+  /* --- ОСНОВНОЙ КОНТЕНТ --- */
+  main { padding: 0 20px 40px 20px; max-width: 1000px; margin: 0 auto; position: relative; z-index: 1;}
+  
+  /* Поиск */
+  .search-container {
+    background: var(--bubble-bg); border-radius: var(--border-radius);
+    padding: 5px 20px; box-shadow: var(--bubble-shadow);
+    display: flex; align-items: center; margin-bottom: 25px;
+  }
+  .search-container input {
+    width: 100%; border: none; background: transparent;
+    padding: 15px 10px; font-size: 16px; outline: none;
+    font-family: 'Nunito', sans-serif; color: var(--text-main);
+  }
+
+  /* Заголовки */
+  .section-title {
+    font-size: 20px; font-weight: 800; margin-bottom: 15px; margin-top: 30px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  /* Пузырьки категорий */
+  .categories-scroll {
+    display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;
+    scrollbar-width: none; /* Firefox */
+  }
+  .categories-scroll::-webkit-scrollbar { display: none; /* Chrome */ }
+  
+  .category-bubble {
+    background: var(--bubble-bg); padding: 12px 24px; border-radius: 40px;
+    font-weight: 700; font-size: 15px; cursor: pointer; white-space: nowrap;
+    box-shadow: var(--bubble-shadow); transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .category-bubble:hover, .category-bubble.active {
+    background: var(--accent); color: #fff; transform: translateY(-2px);
+  }
+
+  /* Сетка обоев */
+  .wallpapers-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;
+  }
+  .wallpaper-card {
+    background: var(--bubble-bg); border-radius: var(--border-radius);
+    overflow: hidden; box-shadow: var(--bubble-shadow);
+    position: relative; cursor: pointer;
+  }
+  .wallpaper-card img {
+    width: 100%; height: 250px; object-fit: cover; display: block;
+    transition: transform 0.3s;
+  }
+  .wallpaper-card:hover img { transform: scale(1.05); }
+  
+  .card-info {
+    padding: 12px; display: flex; justify-content: space-between; align-items: center;
+    background: var(--bubble-bg); position: relative; z-index: 2;
+  }
+  .card-info h3 { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  /* Кнопка избранного (сердечко) */
+  .fav-btn {
+    background: none; border: none; cursor: pointer; font-size: 18px;
+    color: #ccc; transition: color 0.2s;
+  }
+  .fav-btn.active { color: #ff4d6d; }
+
+  /* Модальное окно (на весь экран) */
+  #modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); backdrop-filter: blur(5px);
+    z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center;
+  }
+  #modal.active { display: flex; }
+  #modal img { max-width: 95%; max-height: 80vh; border-radius: 20px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+  #modal .close-modal {
+    position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; cursor: pointer;
+  }
+
+  /* Настройка фона */
+  #bg-upload { display: none; }
+
+  /* Меню навигации (шторка) */
+  .sidebar {
+    position: fixed; top: 0; left: -100%; width: 280px; height: 100vh;
+    background: var(--bubble-bg); z-index: 50; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 30px 20px; border-radius: 0 40px 40px 0; box-shadow: 10px 0 30px rgba(0,0,0,0.05);
+    backdrop-filter: blur(20px); overflow-y: auto;
+  }
+  .sidebar.open { left: 0; }
+  .sidebar h2 { color: var(--accent); margin-bottom: 20px; font-size: 18px; }
+  
+  .menu-list { list-style: none; }
+  .menu-list li {
+    padding: 15px 10px; border-bottom: 1px solid #eee; cursor: pointer;
+    font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 10px;
+  }
+  .menu-list li:hover { color: var(--accent); }
+  
+  .overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3); z-index: 40; display: none; backdrop-filter: blur(2px);
+  }
+  .overlay.active { display: block; }
+
+  /* Адаптив */
+  @media (max-width: 600px) {
+    .wallpapers-grid { grid-template-columns: 1fr; }
+    .wallpaper-card img { height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="user-bg"></div>
+
+<!-- Файл для загрузки фона -->
+<input type="file" id="bg-upload" accept="image/*">
+
+<header>
+  <div class="logo">Bubbles</div>
+  <div class="header-btns">
+    <button class="icon-btn" onclick="document.getElementById('bg-upload').click()" title="Сменить фон">🖼️</button>
+    <button class="icon-btn" onclick="toggleMenu()">≡</button>
+  </div>
+</header>
+
+<div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+<div class="sidebar" id="sidebar">
+  <h2>Меню</h2>
+  <ul class="menu-list">
+    <li onclick="filterCategory('Все'); toggleMenu();">🏠 Все обои</li>
+    <li onclick="showSaved(); toggleMenu();">❤️ Сохраненные</li>
+  </ul>
+  <h2 style="margin-top: 30px;">Категории</h2>
+  <ul class="menu-list" id="sidebar-categories"></ul>
+</div>
+
+<main>
+  <div class="search-container">
+    <span style="font-size: 20px; color: #aaa; margin-right: 10px;">🔍</span>
+    <input type="text" id="global-search" placeholder="Поиск по названию..." oninput="renderWallpapers()">
+  </div>
+
+  <div class="section-title">
+    <span>Категории</span>
+  </div>
+  <div class="categories-scroll" id="categories-container"></div>
+
+  <div class="section-title" style="margin-top: 40px;">
+    <span id="current-view-title">Все обои</span>
+  </div>
+  <div class="wallpapers-grid" id="wallpapers-grid"></div>
+</main>
+
+<!-- Модальное окно для просмотра картинки -->
+<div id="modal" onclick="closeModal(event)">
+  <span class="close-modal">&times;</span>
+  <img id="modal-img" src="" alt="Wallpaper">
+</div>
+
+<script>
+// =========================================================
+// ССЫЛКА НА ТВОЮ ТАБЛИЦУ (CSV)
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1nUNmF9z_Q00_jd-Q3GgP41QbQzW1zpWr4Iz-iOzRI2w/export?format=csv";
+// =========================================================
+
+let allWallpapers = [];
+let currentCategory = "Все";
+let showOnlySaved = false;
+let savedWallpapers = JSON.parse(localStorage.getItem('saved_wallpapers')) || [];
+
+// --- НАСТРОЙКА ФОНА ПОЛЬЗОВАТЕЛЯ ---
+const bgUpload = document.getElementById('bg-upload');
+const userBg = document.getElementById('user-bg');
+
+// Загрузка сохраненного фона при старте
+const savedBg = localStorage.getItem('user_custom_bg');
+if (savedBg) {
+  userBg.style.backgroundImage = `url(${savedBg})`;
+  userBg.classList.add('active');
+}
+
+// Обработка загрузки нового фона
+bgUpload.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const imgData = event.target.result;
+      userBg.style.backgroundImage = `url(${imgData})`;
+      userBg.classList.add('active');
+      try {
+        localStorage.setItem('user_custom_bg', imgData);
+      } catch (err) {
+        alert('Фото слишком большое для сохранения в браузере. Попробуйте картинку поменьше.');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// --- ЗАГРУЗКА ДАННЫХ ИЗ ТАБЛИЦЫ ---
+async function loadData() {
+  try {
+    const response = await fetch(CSV_URL);
+    const csvText = await response.text();
+    const rows = parseCSV(csvText);
+    
+    const headers = rows[0].map(h => h.trim().toLowerCase());
+    const idxTitle = headers.indexOf('название');
+    const idxCat = headers.indexOf('категория');
+    const idxPhoto = headers.indexOf('фото');
+
+    allWallpapers = rows.slice(1)
+      .filter(row => row[idxTitle] && row[idxPhoto])
+      .map(row => ({
+        title: row[idxTitle].trim(),
+        category: row[idxCat] ? row[idxCat].trim() : "Разное",
+        photo: row[idxPhoto].trim()
+      }));
+
+    initCategories();
+    renderWallpapers();
+  } catch (error) {
+    document.getElementById('wallpapers-grid').innerHTML = "<p>Ошибка загрузки данных.</p>";
+  }
+}
+
+function parseCSV(text) {
+  const rows = []; let row = []; let field = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i+1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQuotes = false;
+      else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c !== '\r') field += c;
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// --- ОТРИСОВКА КАТЕГОРИЙ ---
+function initCategories() {
+  const categories = ["Все", ...new Set(allWallpapers.map(w => w.category))];
+  
+  // Верхние пузырьки
+  document.getElementById('categories-container').innerHTML = categories.map(cat => `
+    <div class="category-bubble ${cat === currentCategory && !showOnlySaved ? 'active' : ''}" onclick="filterCategory('${cat.replace(/'/g, "\\'")}')">
+      ${getCatIcon(cat)} ${cat}
+    </div>
+  `).join('');
+
+  // Категории в боковом меню
+  document.getElementById('sidebar-categories').innerHTML = categories.map(cat => `
+    <li onclick="filterCategory('${cat.replace(/'/g, "\\'")}'); toggleMenu();">
+      ${getCatIcon(cat)} ${cat}
+    </li>
+  `).join('');
+}
+
+function getCatIcon(cat) {
+  const c = cat.toLowerCase();
+  if (c.includes('космос')) return '🌌';
+  if (c.includes('минимализм')) return '⬜';
+  if (c.includes('аниме')) return '🌸';
+  if (c.includes('природа')) return '🌿';
+  if (c.includes('город')) return '🏙️';
+  return '📁';
+}
+
+// --- ФИЛЬТРАЦИЯ И ПОИСК ---
+function filterCategory(cat) {
+  currentCategory = cat;
+  showOnlySaved = false;
+  document.getElementById('current-view-title').textContent = cat;
+  document.getElementById('global-search').value = "";
+  initCategories();
+  renderWallpapers();
+}
+
+function showSaved() {
+  showOnlySaved = true;
+  currentCategory = "Все";
+  document.getElementById('current-view-title').textContent = "Сохраненные обои ❤️";
+  document.getElementById('global-search').value = "";
+  initCategories();
+  renderWallpapers();
+}
+
+function renderWallpapers() {
+  const query = document.getElementById('global-search').value.toLowerCase().trim();
+  let filtered = allWallpapers;
+
+  // Фильтр по "Сохраненным"
+  if (showOnlySaved) {
+    filtered = filtered.filter(w => savedWallpapers.includes(w.title));
+  } else if (currentCategory !== "Все") {
+    filtered = filtered.filter(w => w.category === currentCategory);
+  }
+
+  // Фильтр по поиску
+  if (query) {
+    filtered = filtered.filter(w => w.title.toLowerCase().includes(query));
+  }
+
+  const container = document.getElementById('wallpapers-grid');
+  if (filtered.length === 0) {
+    container.innerHTML = "<p style='text-align:center; grid-column: 1/-1; color: var(--text-light);'>Ничего не найдено 🥲</p>";
+    return;
+  }
+
+  container.innerHTML = filtered.map(w => {
+    const isSaved = savedWallpapers.includes(w.title);
+    return `
+      <div class="wallpaper-card">
+        <img src="${w.photo}" alt="${w.title}" onclick="openModal('${w.photo}')" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+        <div class="card-info">
+          <h3>${w.title}</h3>
+          <button class="fav-btn ${isSaved ? 'active' : ''}" onclick="toggleFav(event, '${w.title.replace(/'/g, "\\'")}')">
+            ${isSaved ? '❤️' : '🤍'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// --- СОХРАНЕНИЕ (СЕРДЕЧКО) ---
+function toggleFav(event, title) {
+  event.stopPropagation(); // Чтобы не открывалось фото при клике на сердечко
+  
+  if (savedWallpapers.includes(title)) {
+    savedWallpapers = savedWallpapers.filter(t => t !== title);
+  } else {
+    savedWallpapers.push(title);
+  }
+  
+  localStorage.setItem('saved_wallpapers', JSON.stringify(savedWallpapers));
+  renderWallpapers(); // Перерисовываем, чтобы обновить цвета сердечек
+}
+
+// --- МОДАЛЬНОЕ ОКНО (просмотр во весь экран) ---
+function openModal(photoUrl) {
+  document.getElementById('modal-img').src = photoUrl;
+  document.getElementById('modal').classList.add('active');
+}
+
+function closeModal(event) {
+  if (event.target.id === 'modal' || event.target.className === 'close-modal') {
+    document.getElementById('modal').classList.remove('active');
+  }
+}
+
+// --- БОКОВОЕ МЕНЮ ---
+function toggleMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('active');
+}
+
+// Запуск
+loadData();
+</script>
+</body>
+</html>
